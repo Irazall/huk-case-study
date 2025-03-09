@@ -1,0 +1,77 @@
+---
+title: "HUK Case Study - Feature Engineering"
+author: "Chris-Gabriel Islam"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    self-contained: true
+---
+
+# Init
+
+```{r setup}
+#| output: false
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr) # for data manipulation
+library(textshape) # for function "column_to_rownames"
+```
+
+# Read data
+
+```{r read data}
+data_sev_edit = readRDS(here::here("data", "edit" , "data_sev_agg_clinfo.rds"))
+```
+
+# Feature Engineering
+
+We decide to let the numeric variables as they are in order to being able to model potential non-linearities. Hence, we analyze only the categorical variables. We use kMeans for clustering. Due to the time constraint, we choose 3 clusters for each variable instead of testing different cluster sizes.
+
+
+```{r kmeans}
+cat_vars_incl_cl <- list(
+  list("Area", 3),
+  list("VehBrand", 3),
+  list("Region", 3)
+)
+num_vars <- c("VehPower", "VehAge", "DrivAge", "BonusMalus", "Density", "ClaimAmount_expected")
+for (i in cat_vars_incl_cl) {
+  # get loop variables
+  cat_var <- i[[1]]
+  no_cl <- i[[2]]
+  # print status
+  print(paste0("Variable: ", cat_var))
+  # compute summary statistics
+  category_stats <- data_sev_edit %>%
+    # select(-c(IDpol, ClaimNb, ClaimAmount, Exposure)) %>%  # Remove meaningless columns
+    group_by(.data[[cat_var]]) %>%
+    summarise(across(where(is.numeric), \(x) mean(x, na.rm = TRUE))) %>%
+    column_to_rownames(cat_var)
+  # compute distance matrix
+  dist_matrix <- dist(category_stats, method = "euclidean")
+  # K-Means Clustering
+  set.seed(176)
+  clusters <- kmeans(category_stats, centers = no_cl)
+  category_stats$cluster <- clusters$cluster
+  # print result
+  print(data.frame(category = rownames(category_stats), cluster = category_stats$cluster))
+  # merge back to data
+  category_stats[[cat_var]] <- rownames(category_stats)
+  data_sev_edit <- data_sev_edit %>% 
+    left_join(category_stats %>% select(cluster, all_of(cat_var)), by = cat_var) %>%
+    select(-all_of(cat_var)) 
+  data_sev_edit[[paste0("cl", cat_var)]] <- data_sev_edit$cluster
+  data_sev_edit$cluster <- NULL
+  # make cluster a factor 
+  data_sev_edit[[paste0("cl", cat_var)]] <- paste0(cat_var, data_sev_edit[[paste0("cl", cat_var)]])
+  data_sev_edit[[paste0("cl", cat_var)]] <- factor(data_sev_edit[[paste0("cl", cat_var)]], levels = unique(data_sev_edit[[paste0("cl", cat_var)]]))
+}
+```
+
+# Save data
+
+```{r save data}
+# Save data as RDS
+saveRDS(data_sev_edit, file = here::here("data", "edit", "data_sev_cl.rds"))
+```

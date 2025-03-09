@@ -1,0 +1,180 @@
+---
+title: "HUK Case Study - EDA"
+author: "Chris-Gabriel Islam"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    self-contained: true
+---
+
+# Init
+
+```{r setup}
+#| output: false
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2) # for data visualization
+library(GGally) # for correlation analysis
+library(dplyr) # for data manipulation
+library(foreign) # to load arff data
+library(DescTools) # for winsorizing
+```
+
+# Read data
+
+```{r read data}
+data_freq <- read.arff(here::here("data", "raw", "freMTPL2freq.arff"))
+data_sev <- read.arff(here::here("data", "raw", "freMTPL2sev.arff"))
+```
+
+# Checking data integrity
+
+```{r check data integrity}
+# check for missing values
+sum(is.na(data_freq))
+sum(is.na(data_sev))
+# check for data types
+str(data_freq)
+str(data_sev)
+# check for duplicates
+sum(duplicated(data_freq))
+sum(duplicated(data_sev))
+```
+
+The data seems to be integer since there are no missing values. The data types are also following the data record description. For some variables we do not know the unit of measurement. The severity data contains some duplicates which means that `r sum(duplicated(data_sev))` clients have more than one claim. The frequency data does not contain any duplicates.
+
+```{r check join}
+# sum ClaimAmount per client (for later check)
+data_sev_agg <- data_sev %>% group_by(IDpol) %>% summarise(ClaimAmount = sum(ClaimAmount), ClaimNb_sev = n())
+# join the client information to the aggregated severity data
+data_sev_agg_clinfo <- merge(data_freq, data_sev_agg, by = "IDpol")
+# check if the frequency information is the same in both data sets
+sum(data_sev_agg_clinfo$ClaimNb != data_sev_agg_clinfo$ClaimNb_sev)
+# remove the inconsistent observations
+data_sev_agg_clinfo <- data_sev_agg_clinfo[data_sev_agg_clinfo$ClaimNb == data_sev_agg_clinfo$ClaimNb_sev,]
+data_sev_agg_clinfo$ClaimNb_sev <- NULL
+# check that every observation has a unique policy ID 
+sum(duplicated(data_sev_agg_clinfo$IDpol))
+```
+
+For `r nrow(data_sev_agg) - nrow(data_sev_agg_clinfo)` clients we seem to miss client information. Furthermore, there is one client with a different number of claims in the frequency and severity data. We remove this inconsistency since we cannot ask the claims department for a correction.
+
+# Descriptive Analysis
+
+```{r summary statistics}
+# Summary statistics
+summary(data_sev_agg_clinfo)
+```
+
+We see that most clients have not made any claims. Most of the clients tend to have a policy of at least half a year or longer. It seems suspicious that there is an exposure of larger than 1. The large vehicle ages and driver ages of 100 years also seem suspicious. We will investigate this further and maybe remove these observations. In addition, there are some very large claims with more than € 4M and very small claims with € 1. 
+
+```{r plotting the data}
+# Plotting histograms for numerical data
+numeric_data_freq <- c("ClaimAmount", "ClaimNb", "Exposure", "VehPower", "VehAge", "DrivAge", "BonusMalus", "Density")
+par(mfrow = c(2,2))
+for (i in numeric_data_freq) {
+  hist(data_sev_agg_clinfo[[i]], main = NULL, xlab = i, breaks = 40)
+}
+# Creating tables for categorical data
+categorical_data_freq <- c("Area", "VehBrand", "VehGas", "Region")
+for (i in categorical_data_freq) {
+  print(paste0("Tables for ", i))
+  print("Frequency table:")
+  freq_table <- table(data_sev_agg_clinfo[[i]])
+  print(freq_table)
+  print("Percentage table:")
+  print(round(prop.table(freq_table) * 100, 2))
+}
+```
+Most numerical variables are not normally distributed. We might need to normalize them. Observing the small classes for `VehBrand` and `Region` we might want to merge these classes to avoid overfitting. 
+
+# Outlier removal
+
+## Number of claims
+
+```{r outlier removal number of claims}
+# take a look at the observations with the larges number of claims.
+head(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimNb, decreasing = TRUE),], n = 20)
+# remove the observations with more than 5 claims
+data_sev_agg_clinfo <- data_sev_agg_clinfo[data_sev_agg_clinfo$ClaimNb < 5,]
+```
+
+We see that the observations with more than 5 claims stem probably from the same person. We remove these observations. The idea of this removal stems from M. Wüthrich and Merz (2023), https://doi.org/10.1007/978-3-031-12409-9_13
+
+## Claim amount
+
+```{r outlier removal claim amount}
+# take a look at the observations with the largest claim amount
+head(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimAmount, decreasing = TRUE),], n = 20)
+# take a look at the observations with the smallest claim amount
+tail(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimAmount, decreasing = TRUE),], n = 20)
+```
+
+We do not see any observations in the claim amount stemming from a single suspicious person. Still, the one claim above € 4M and the two claims above € 1M seem like outliers. They will be winsorized later. 
+
+# Winsorizing
+
+Since car insurances last usually one year, we winsorize the exposure to 1.
+
+```{r winsorizing}
+data_sev_agg_clinfo$Exposure <- ifelse(data_sev_agg_clinfo$Exposure > 1, 1, data_sev_agg_clinfo$Exposure)
+```
+
+In the insurance context, large claims are usually handled by winsorizing Therefore, we take a look at the quantiles.
+
+```{r quantiles}
+quantile(data_sev_agg_clinfo$ClaimAmount, probs = c(0, 0.005, 0.01, 0.025, 0.05, 0.95, 0.975, 0.99, 0.995, 1))
+# winsorize 0.5 % from above and below
+data_sev_agg_clinfo$ClaimAmount <- Winsorize(data_sev_agg_clinfo$ClaimAmount, val = quantile(data_sev_agg_clinfo$ClaimAmount, probs = c(0.005, 0.995), na.rm = FALSE))
+```
+
+We winsorize only 1 % of the claims, i.e., half a percent from above and half a percent from below. Thereby, we follow the recommendation by the DAV based on the Tschebychev inequality.
+
+Potentially, we should also winsorize the vehicle age bonus-malus level. For consistency reasons, we winsorize all numerical variables.
+
+```{r winsorizing all other numerical variables}
+for (i in c("VehPower", "VehAge", "DrivAge", "BonusMalus", "Density")) {
+  print(paste0("Quantiles for ", i, ":"))
+  print(quantile(data_sev_agg_clinfo[[i]], probs = c(0, 0.005, 0.01, 0.025, 0.05, 0.95, 0.975, 0.99, 0.995, 1)))
+  # winsorize 0.5 % from above and below
+  data_sev_agg_clinfo[[i]] <- Winsorize(data_sev_agg_clinfo[[i]], val = quantile(data_sev_agg_clinfo[[i]], probs = c(0.005, 0.995), na.rm = FALSE))
+}
+```
+
+# Build independent variable
+
+```{r build independent variable}
+data_sev_agg_clinfo$ClaimAmount_expected <- data_sev_agg_clinfo$ClaimAmount / data_sev_agg_clinfo$Exposure
+```
+
+# Correlation Analysis for numerical variables
+
+```{r correlation analysis, fig.width = 15, fig.height = 15}
+ggpairs(data_sev_agg_clinfo[, c("ClaimAmount_expected", "VehPower", "VehAge", "DrivAge", "BonusMalus", "Density")], progress = FALSE, lower = list(continuous = wrap("points", size = 0.1)))
+```
+
+The largest (negative) correlation seems to be between the driver's age and the bonus-malus level. Regarding our independent variable, the driver age and the bonus-malus level correlate negatively and positively respectively.
+
+# Box plot for categorical variables
+
+```{r box plots}
+par(mfrow = c(2,2))
+for (i in categorical_data_freq) {
+  # cut y axis at 5000 for visualization purposes
+  boxplot(data_sev_agg_clinfo$ClaimAmount_expected ~ data_sev_agg_clinfo[[i]], ylim = c(0, 5000), main = i, xlab = i, ylab = "Claim Amount expected")
+}
+  
+```
+
+The box plots show that some characteristics of area, vehicle brand, and region have a higher impact on the expected claim amount than the others. The two types of vehicle gas do not seem to have large differences in the expected claim amount.
+
+# Save data
+
+```{r save data}
+# Remove unnecessary columns
+data_sev_agg_clinfo <- data_sev_agg_clinfo %>% select(-c(ClaimAmount, ClaimNb, IDpol, Exposure))
+# Save data as RDS
+saveRDS(data_sev_agg_clinfo, file = here::here("data", "edit", "data_sev_agg_clinfo.rds"))
+```
+
