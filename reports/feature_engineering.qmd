@@ -16,6 +16,9 @@ rm(list = ls())
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr) # for data manipulation
 library(textshape) # for function "column_to_rownames"
+library(moments) # to measure skewness
+library(rpart) # for decision trees
+library(rpart.plot) # for plotting decision trees
 ```
 
 # Read data
@@ -24,54 +27,71 @@ library(textshape) # for function "column_to_rownames"
 data_sev_edit = readRDS(here::here("data", "edit" , "data_sev_agg_clinfo.rds"))
 ```
 
-# Feature Engineering
+# Feature Engineering for numerical variables
 
-We decide to let the numeric variables as they are in order to being able to model potential non-linearities. Hence, we analyze only the categorical variables. We use kMeans for clustering. Due to the time constraint, we choose 3 clusters for each variable instead of testing different cluster sizes.
+The age variables as well as the vehicle power is on a similar scale and more or less normally distributed. Therefore, no normalization for these variables is required. ClaimAmount, Density as well as BonusMalus are highly skewed. We log-transform the dependent variable to keep interpretability (in contrast to scaling). We could log-transform Density and BonusMalus as well. However, we rather build dummy variables for the clusters of these variables to increase the predictive power of the variables. Depending on the number of clusters, they could model non-linear relationships. We use decision trees to find the split points for the clusters.
 
-
-```{r kmeans}
-cat_vars_incl_cl <- list(
-  list("Area", 3),
-  list("VehBrand", 3),
-  list("Region", 3)
-)
-num_vars <- c("VehPower", "VehAge", "DrivAge", "BonusMalus", "Density", "ClaimAmount_expected")
-for (i in cat_vars_incl_cl) {
-  # get loop variables
-  cat_var <- i[[1]]
-  no_cl <- i[[2]]
-  # print status
-  print(paste0("Variable: ", cat_var))
-  # compute summary statistics
-  category_stats <- data_sev_edit %>%
-    # select(-c(IDpol, ClaimNb, ClaimAmount, Exposure)) %>%  # Remove meaningless columns
-    group_by(.data[[cat_var]]) %>%
-    summarise(across(where(is.numeric), \(x) mean(x, na.rm = TRUE))) %>%
-    column_to_rownames(cat_var)
-  # compute distance matrix
-  dist_matrix <- dist(category_stats, method = "euclidean")
-  # K-Means Clustering
-  set.seed(176)
-  clusters <- kmeans(category_stats, centers = no_cl)
-  category_stats$cluster <- clusters$cluster
-  # print result
-  print(data.frame(category = rownames(category_stats), cluster = category_stats$cluster))
-  # merge back to data
-  category_stats[[cat_var]] <- rownames(category_stats)
-  data_sev_edit <- data_sev_edit %>% 
-    left_join(category_stats %>% select(cluster, all_of(cat_var)), by = cat_var) %>%
-    select(-all_of(cat_var)) 
-  data_sev_edit[[paste0("cl", cat_var)]] <- data_sev_edit$cluster
-  data_sev_edit$cluster <- NULL
-  # make cluster a factor 
-  data_sev_edit[[paste0("cl", cat_var)]] <- paste0(cat_var, data_sev_edit[[paste0("cl", cat_var)]])
-  data_sev_edit[[paste0("cl", cat_var)]] <- factor(data_sev_edit[[paste0("cl", cat_var)]], levels = unique(data_sev_edit[[paste0("cl", cat_var)]]))
+```{r numerical feature engineering}
+# Check for skewness
+skewness(data_sev_edit$ClaimAmount_expected)
+skewness(data_sev_edit$Density)
+skewness(data_sev_edit$BonusMalus)
+# Build logged claim amount
+data_sev_edit$log_ClaimAmount_expected <- log(data_sev_edit$ClaimAmount_expected)
+# Build decision tree for split point
+numeric_indep_vars <- c("Density", "BonusMalus", "DrivAge", "VehPower", "VehAge")
+for (var in numeric_indep_vars) {
+  tree_model <- rpart(log_ClaimAmount_expected ~ ., data = data_sev_edit[, c("log_ClaimAmount_expected", var)], method = "anova", cp = 0.0005)
+  rpart.plot(tree_model, type = 3, tweak = 1.2)
 }
+# Transform numerical variables to clusters
+data_sev_edit$clDensity <- cut(data_sev_edit$Density, breaks = c(-Inf, 447, Inf), labels = c("low", "high"), right = FALSE)
+data_sev_edit$clBonusMalus <- cut(data_sev_edit$BonusMalus, breaks = c(-Inf, 59, 72, 94, 99, 101, Inf), labels = c("lowest", "lower", "medium-low", "medium-high", "high", "highest"), right = FALSE)
+data_sev_edit$clDrivAge <- cut(data_sev_edit$DrivAge, breaks = c(-Inf, 22, 27, 55, Inf), labels = c("low", "medium-low", "medium-high", "high"), right = FALSE)
+data_sev_edit$clVehPower <- cut(data_sev_edit$VehPower, breaks = c(-Inf, 8, Inf), labels = c("low", "high"), right = FALSE)
+data_sev_edit$clVehAge <- cut(data_sev_edit$VehAge, breaks = c(-Inf, 1, 3, 15, Inf), labels = c("low", "medium-low", "medium-high", "high"), right = FALSE)
+# Delete original variables
+data_sev_edit <- data_sev_edit %>% select(-c(Density, BonusMalus, DrivAge, VehPower, VehAge, ClaimAmount_expected))
+```
+
+Since the scales of the other numeric variables are in a similar ballpark, we do not scale them.
+
+# Feature Engineering for categorical variables
+
+Again we use a decision tree to find the split points for the clusters.
+
+
+```{r categorical feature engineering}
+# calculate regression trees
+for (cat_var in c("Area", "Region", "VehBrand")) {
+  tree_model <- rpart(log_ClaimAmount_expected ~ ., data = data_sev_edit[, c("log_ClaimAmount_expected", cat_var)], method = "anova", cp = 0.0005)
+  rpart.plot(tree_model, type = 3, tweak = 1.2)
+}
+# Transform categorical variables to clusters
+data_sev_edit$clArea <- ifelse(data_sev_edit$Area %in% c("A", "B", "C"), "ABC", "DEF")
+data_sev_edit$clRegion <- ifelse(data_sev_edit$Region %in% c("R24", "R25", "R52", "R53"), "Cluster1",
+                                 ifelse(data_sev_edit$Region %in% c("R41", "R42", "R54", "R74", "R82"), "Cluster2",
+                                        ifelse(data_sev_edit$Region %in% c("R43", "R94"), "Cluster3", "Cluster4"))) 
+data_sev_edit$clVehBrand <- ifelse(data_sev_edit$VehBrand == "B12", "B12", "other")
+# Delete original variables
+data_sev_edit <- data_sev_edit %>% select(-c(Area, Region, VehBrand))
+```
+
+# Interaction effects
+
+We hypothesize that young drivers with fast cars are more likely to have accidents. Therefore, we build an interaction variable for these two variables.
+
+```{r interaction effects}
+data_sev_edit$DrivAge_VehPower <- interaction(data_sev_edit$clDrivAge, data_sev_edit$clVehPower)
+# group some of the interactions together
+data_sev_edit$DrivAge_VehPower <- ifelse(data_sev_edit$DrivAge_VehPower %in% c("medium-high.low", "high.low"), "high.low", "other")
 ```
 
 # Save data
 
 ```{r save data}
+# Rename log_claim_amount_expected to target
+data_sev_edit <- data_sev_edit %>% rename(target = log_ClaimAmount_expected)
 # Save data as RDS
 saveRDS(data_sev_edit, file = here::here("data", "edit", "data_sev_cl.rds"))
 ```
