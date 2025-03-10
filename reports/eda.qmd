@@ -113,6 +113,12 @@ tail(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimAmount, decreasing = TRU
 
 We do not see any observations in the claim amount stemming from a single suspicious person. Still, the one claim above € 4M and the two claims above € 1M seem like outliers. They will be winsorized later. 
 
+# Build independent variable
+
+```{r build independent variable}
+data_sev_agg_clinfo$ClaimAmount_expected <- data_sev_agg_clinfo$ClaimAmount / data_sev_agg_clinfo$Exposure
+```
+
 # Winsorizing
 
 Since car insurances last usually one year, we winsorize the exposure to 1.
@@ -124,12 +130,12 @@ data_sev_agg_clinfo$Exposure <- ifelse(data_sev_agg_clinfo$Exposure > 1, 1, data
 In the insurance context, large claims are usually handled by winsorizing Therefore, we take a look at the quantiles.
 
 ```{r quantiles}
-quantile(data_sev_agg_clinfo$ClaimAmount, probs = c(0, 0.005, 0.01, 0.025, 0.05, 0.95, 0.975, 0.99, 0.995, 1))
+quantile(data_sev_agg_clinfo$ClaimAmount_expected, probs = c(0, 0.005, 0.01, 0.025, 0.05, 0.95, 0.975, 0.99, 0.995, 1))
 # winsorize 0.5 % from above and below
-data_sev_agg_clinfo$ClaimAmount <- Winsorize(data_sev_agg_clinfo$ClaimAmount, val = quantile(data_sev_agg_clinfo$ClaimAmount, probs = c(0.005, 0.995), na.rm = FALSE))
+data_sev_agg_clinfo$ClaimAmount_expected <- Winsorize(data_sev_agg_clinfo$ClaimAmount_expected, val = quantile(data_sev_agg_clinfo$ClaimAmount_expected, probs = c(0.025, 0.975), na.rm = FALSE))
 ```
 
-We winsorize only 1 % of the claims, i.e., half a percent from above and half a percent from below. Thereby, we follow the recommendation by the DAV based on the Tschebychev inequality.
+We winsorize 5 % of the claims, i.e., 2.5 percent from above and 2.5 percent from below, since the gap between the 99 % quantile and the 97.5 % quantile is far larger than the gap between the 97.5 % and the 95 % quantile. 
 
 Potentially, we should also winsorize the vehicle age bonus-malus level. For consistency reasons, we winsorize all numerical variables.
 
@@ -138,15 +144,10 @@ for (i in c("VehPower", "VehAge", "DrivAge", "BonusMalus", "Density")) {
   print(paste0("Quantiles for ", i, ":"))
   print(quantile(data_sev_agg_clinfo[[i]], probs = c(0, 0.005, 0.01, 0.025, 0.05, 0.95, 0.975, 0.99, 0.995, 1)))
   # winsorize 0.5 % from above and below
-  data_sev_agg_clinfo[[i]] <- Winsorize(data_sev_agg_clinfo[[i]], val = quantile(data_sev_agg_clinfo[[i]], probs = c(0.005, 0.995), na.rm = FALSE))
+  data_sev_agg_clinfo[[i]] <- Winsorize(data_sev_agg_clinfo[[i]], val = quantile(data_sev_agg_clinfo[[i]], probs = c(0.025, 0.975), na.rm = FALSE))
 }
 ```
 
-# Build independent variable
-
-```{r build independent variable}
-data_sev_agg_clinfo$ClaimAmount_expected <- data_sev_agg_clinfo$ClaimAmount / data_sev_agg_clinfo$Exposure
-```
 
 # Correlation Analysis for numerical variables
 
@@ -164,7 +165,6 @@ for (i in categorical_data_freq) {
   # cut y axis at 5000 for visualization purposes
   boxplot(data_sev_agg_clinfo$ClaimAmount_expected ~ data_sev_agg_clinfo[[i]], ylim = c(0, 5000), main = i, xlab = i, ylab = "Claim Amount expected")
 }
-  
 ```
 
 The box plots show that some characteristics of area, vehicle brand, and region have a higher impact on the expected claim amount than the others. The two types of vehicle gas do not seem to have large differences in the expected claim amount.
