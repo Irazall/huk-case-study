@@ -1,0 +1,125 @@
+---
+title: "HUK Case Study - Model Comparison"
+author: "Chris-Gabriel Islam"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    self-contained: true
+---
+
+# Init
+
+```{r setup}
+#| output: false
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+library(caret) # for data partition
+library(dplyr) # for data manipulation
+library(car) # for VIF
+library(glmnet) # for lasso regression
+library(randomForest) # for random forest
+library(nnet) # for neural network
+library(xgboost) # for xgboost
+```
+
+# Read data
+
+```{r read data}
+data_sev_cl = readRDS(here::here("data", "edit" , "data_sev_cl.rds"))
+```
+
+# Train-Test Split
+
+We split the data into a training and a test set. Due to the skewness of the claim amount, we use stratified sampling.
+
+```{r train-test-split}
+set.seed(176)
+train_index <- createDataPartition(data_sev_cl$target, p = 0.8, list = FALSE)
+train_data <- data_sev_cl[train_index,]
+test_data <- data_sev_cl[-train_index,]
+summary(train_data$target)
+summary(test_data$target)
+```
+
+# Model Creation
+
+
+## Linear Regression
+
+As a baseline model, we use a linear regression model.
+
+```{r lm}
+lr_mod <- lm(target ~ ., data = train_data)
+summary(lr_mod)
+plot(lr_mod)
+vif(lr_mod)
+```
+
+Based on the diagnostics, the linear model fits the data very badly. Apparently, we deal with a heavy-tail problem. In addition, there is colinearity between Density and Area. Some observations have a high leverage. Next, we use a lasso regression to select the most important features.
+
+```{r lasso}
+x <- model.matrix(target ~ ., data = data_sev_cl)[,-1]
+y <- data_sev_cl$target
+lasso_mod <- cv.glmnet(x, y, alpha = 1)
+coef(lasso_mod, s = "lambda.min")
+```
+
+Surprisingly, all variables seem to be important following the lasso.
+
+## Random Forest
+
+```{r rf}
+rf_mod <- randomForest(target ~ ., data = train_data)
+rf_mod
+importance(rf_mod)
+```
+
+## Neural Network
+
+```{r nn}
+nn_mod <- nnet(target ~ ., data = train_data, size = 5, maxit = 1000)
+summary(nn_mod)
+```
+
+## XGBoost
+
+```{r xgboost}
+# Convert categorical features to dummy variables
+dummies <- dummyVars("~ .", data = train_data) 
+train_numeric <- predict(dummies, newdata = train_data)  # Transform data
+# Convert to matrix
+train_matrix <- as.matrix(train_numeric)
+# Define target
+train_label <- train_data$target
+# Create DMatrix
+dtrain <- xgb.DMatrix(data = train_matrix, label = train_label)
+# Train model
+xgb_mod <- xgboost(data = dtrain, nrounds = 100, objective = "reg:squarederror")
+summary(xgb_mod)
+```
+
+# Model Comparison
+
+As a target metric, we use the root mean squared error (RMSE) since in the insurance context, large errors are more costly than small errors and can even lead to bankruptcy.
+
+```{r model comparison}
+test_numeric <- predict(dummies, newdata = test_data)  # Same `dummyVars` as before
+test_matrix <- as.matrix(test_numeric)
+# Predictions
+lr_pred <- predict(lr_mod, newdata = test_data)
+rf_pred <- predict(rf_mod, newdata = test_data)
+nn_pred <- predict(nn_mod, newdata = test_data)
+xgb_pred <- predict(xgb_mod, newdata = test_matrix)
+# RMSE
+rmse_lr <- sqrt(mean((test_data$target - lr_pred)^2))
+rmse_rf <- sqrt(mean((test_data$target - rf_pred)^2))
+rmse_nn <- sqrt(mean((test_data$target - nn_pred)^2))
+rmse_xgb <- sqrt(mean((test_data$target - xgb_pred)^2))
+rmse_lr
+rmse_rf
+rmse_nn
+rmse_xgb
+```
+
+XGBoost is a clear winner.
