@@ -1,0 +1,96 @@
+---
+title: "HUK Case Study - Model Building"
+author: "Chris-Gabriel Islam"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    self-contained: true
+---
+
+# Init
+
+```{r setup}
+#| output: false
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+library(caret) # for data partition
+library(dplyr) # for data manipulation
+library(h2o) # for machine learning
+```
+
+# Read data
+
+```{r read data}
+train_data <- readRDS(here::here("data", "edit", "train_data.rds"))
+test_data <- readRDS(here::here("data", "edit", "test_data.rds"))
+```
+
+# Improve XGBoost model
+
+Sticking with RMSE as the evaluation metric, we can further improve the XGBoost model by tuning the hyperparameters. We use the `caret` package to tune the hyperparameters. We use a grid search to find the best hyperparameters. We use 5-fold cross-validation to evaluate the model. We use the `train` function to tune the hyperparameters.
+
+```{r tune xgboost}
+# Initialize H2O
+h2o.init()
+
+# Load Data
+train_h2o <- as.h2o(train_data)
+test_h2o <- as.h2o(test_data)
+
+# Define Predictors and Target
+predictors <- setdiff(names(train_h2o), "target")
+target <- "target"
+
+# Define Hyperparameter Grid
+hyper_params <- list(
+  ntrees = c(50, 100, 200),
+  max_depth = c(4, 6, 8),
+  learn_rate = c(0.01, 0.05, 0.1),
+  colsample_bytree = c(0.7, 0.8, 1.0),
+  subsample = c(0.7, 0.8, 1.0),
+  min_rows = c(1, 5, 10)
+)
+
+# Define Search Criteria (Random Search)
+search_criteria <- list(
+  strategy = "RandomDiscrete",
+  max_models = 20,
+  seed = 42
+)
+
+# Run Grid Search
+grid <- h2o.grid(
+  algorithm = "xgboost",
+  grid_id = "xgb_grid",
+  x = predictors,
+  y = target,
+  training_frame = train_h2o,
+  validation_frame = test_h2o,
+  stopping_metric = "RMSE",
+  hyper_params = hyper_params,
+  search_criteria = search_criteria
+)
+
+# Get Best Model (Lowest RMSE)
+grid_results <- h2o.getGrid("xgb_grid", sort_by = "RMSE", decreasing = FALSE)
+best_model <- h2o.getModel(grid_results@model_ids[[1]])
+
+# Print Best Model Parameters
+print(best_model@parameters)
+
+# Compute RMSE
+perf <- h2o.performance(best_model, newdata = test_h2o)
+rmse <- h2o.rmse(perf)
+print(paste("Best Model RMSE:", rmse))
+```
+
+# Explain model
+
+```{r explain model}
+# Initialize H2O Explain
+h2o_explain <- h2o.explain(best_model, test_h2o)
+print(h2o_explain)
+# Close h2o
+h2o.shutdown(prompt = FALSE)
+```
