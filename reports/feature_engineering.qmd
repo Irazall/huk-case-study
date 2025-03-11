@@ -24,7 +24,7 @@ library(rpart.plot) # for plotting decision trees
 # Read data
 
 ```{r read data}
-data_sev_edit = readRDS(here::here("data", "edit" , "data_sev_agg_clinfo.rds"))
+data_sev_edit <- readRDS(here::here("data", "edit", "data_sev_agg_clinfo.rds"))
 ```
 
 # Feature Engineering for numerical variables
@@ -70,8 +70,10 @@ for (cat_var in c("Area", "Region", "VehBrand")) {
 # Transform categorical variables to clusters
 data_sev_edit$clArea <- ifelse(data_sev_edit$Area %in% c("A", "B", "C"), "ABC", "DEF")
 data_sev_edit$clRegion <- ifelse(data_sev_edit$Region %in% c("R24", "R25", "R52", "R53"), "Cluster1",
-                                 ifelse(data_sev_edit$Region %in% c("R41", "R42", "R54", "R74", "R82"), "Cluster2",
-                                        ifelse(data_sev_edit$Region %in% c("R43", "R94"), "Cluster3", "Cluster4"))) 
+  ifelse(data_sev_edit$Region %in% c("R41", "R42", "R54", "R74", "R82"), "Cluster2",
+    ifelse(data_sev_edit$Region %in% c("R43", "R94"), "Cluster3", "Cluster4")
+  )
+)
 data_sev_edit$clVehBrand <- ifelse(data_sev_edit$VehBrand == "B12", "B12", "other")
 # Delete original variables
 data_sev_edit <- data_sev_edit %>% select(-c(Area, Region, VehBrand))

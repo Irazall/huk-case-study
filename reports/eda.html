@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Chris-Gabriel Islam">
-<meta name="dcterms.date" content="2025-03-09">
+<meta name="dcterms.date" content="2025-03-11">
 
 <title>HUK Case Study - EDA</title>
 <style>
@@ -3124,7 +3124,7 @@ vertical-align: -.125em;
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">March 9, 2025</p>
+      <p class="date">March 11, 2025</p>
     </div>
   </div>
   
@@ -3203,18 +3203,20 @@ vertical-align: -.125em;
 <p>The data seems to be integer since there are no missing values. The data types are also following the data record description. For some variables we do not know the unit of measurement. The severity data contains some duplicates which means that 255 clients have more than one claim. The frequency data does not contain any duplicates.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sum ClaimAmount per client (for later check)</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>data_sev_agg <span class="ot">&lt;-</span> data_sev <span class="sc">%&gt;%</span> <span class="fu">group_by</span>(IDpol) <span class="sc">%&gt;%</span> <span class="fu">summarise</span>(<span class="at">ClaimAmount =</span> <span class="fu">sum</span>(ClaimAmount), <span class="at">ClaimNb_sev =</span> <span class="fu">n</span>())</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># join the client information to the aggregated severity data</span></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>data_sev_agg_clinfo <span class="ot">&lt;-</span> <span class="fu">merge</span>(data_freq, data_sev_agg, <span class="at">by =</span> <span class="st">&quot;IDpol&quot;</span>)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># check if the frequency information is the same in both data sets</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimNb <span class="sc">!=</span> data_sev_agg_clinfo<span class="sc">$</span>ClaimNb_sev)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>data_sev_agg <span class="ot">&lt;-</span> data_sev <span class="sc">%&gt;%</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(IDpol) <span class="sc">%&gt;%</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">ClaimAmount =</span> <span class="fu">sum</span>(ClaimAmount), <span class="at">ClaimNb_sev =</span> <span class="fu">n</span>())</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># join the client information to the aggregated severity data</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>data_sev_agg_clinfo <span class="ot">&lt;-</span> <span class="fu">merge</span>(data_freq, data_sev_agg, <span class="at">by =</span> <span class="st">&quot;IDpol&quot;</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co"># check if the frequency information is the same in both data sets</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimNb <span class="sc">!=</span> data_sev_agg_clinfo<span class="sc">$</span>ClaimNb_sev)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 1</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># remove the inconsistent observations</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>data_sev_agg_clinfo <span class="ot">&lt;-</span> data_sev_agg_clinfo[data_sev_agg_clinfo<span class="sc">$</span>ClaimNb <span class="sc">==</span> data_sev_agg_clinfo<span class="sc">$</span>ClaimNb_sev,]</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>data_sev_agg_clinfo <span class="ot">&lt;-</span> data_sev_agg_clinfo[data_sev_agg_clinfo<span class="sc">$</span>ClaimNb <span class="sc">==</span> data_sev_agg_clinfo<span class="sc">$</span>ClaimNb_sev, ]</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>data_sev_agg_clinfo<span class="sc">$</span>ClaimNb_sev <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check that every observation has a unique policy ID </span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># check that every observation has a unique policy ID</span></span>
 <span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">duplicated</span>(data_sev_agg_clinfo<span class="sc">$</span>IDpol))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0</code></pre>
@@ -3258,7 +3260,7 @@ vertical-align: -.125em;
 <div class="cell">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plotting histograms for numerical data</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>numeric_data_freq <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;ClaimAmount&quot;</span>, <span class="st">&quot;ClaimNb&quot;</span>, <span class="st">&quot;Exposure&quot;</span>, <span class="st">&quot;VehPower&quot;</span>, <span class="st">&quot;VehAge&quot;</span>, <span class="st">&quot;DrivAge&quot;</span>, <span class="st">&quot;BonusMalus&quot;</span>, <span class="st">&quot;Density&quot;</span>)</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>))</span>
 <span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> numeric_data_freq) {</span>
 <span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hist</span>(data_sev_agg_clinfo[[i]], <span class="at">main =</span> <span class="cn">NULL</span>, <span class="at">xlab =</span> i, <span class="at">breaks =</span> <span class="dv">40</span>)</span>
 <span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -3337,7 +3339,7 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="number-of-claims">Number of claims</h2>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># take a look at the observations with the larges number of claims.</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data_sev_agg_clinfo[<span class="fu">order</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimNb, <span class="at">decreasing =</span> <span class="cn">TRUE</span>),], <span class="at">n =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data_sev_agg_clinfo[<span class="fu">order</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimNb, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ], <span class="at">n =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>        IDpol ClaimNb Exposure Area VehPower VehAge DrivAge BonusMalus VehBrand
 14313 2241683      16     0.33    D        4     12      52         50       B1
@@ -3383,7 +3385,7 @@ vertical-align: -.125em;
 2810   Diesel     136    R11     2591.93</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># remove the observations with more than 5 claims</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>data_sev_agg_clinfo <span class="ot">&lt;-</span> data_sev_agg_clinfo[data_sev_agg_clinfo<span class="sc">$</span>ClaimNb <span class="sc">&lt;</span> <span class="dv">5</span>,]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>data_sev_agg_clinfo <span class="ot">&lt;-</span> data_sev_agg_clinfo[data_sev_agg_clinfo<span class="sc">$</span>ClaimNb <span class="sc">&lt;</span> <span class="dv">5</span>, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We see that the observations with more than 5 claims stem probably from the same person. We remove these observations. The idea of this removal stems from M. Wüthrich and Merz (2023), https://doi.org/10.1007/978-3-031-12409-9_13</p>
 </section>
@@ -3391,7 +3393,7 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="claim-amount">Claim amount</h2>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># take a look at the observations with the largest claim amount</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data_sev_agg_clinfo[<span class="fu">order</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimAmount, <span class="at">decreasing =</span> <span class="cn">TRUE</span>),], <span class="at">n =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data_sev_agg_clinfo[<span class="fu">order</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimAmount, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ], <span class="at">n =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>        IDpol ClaimNb Exposure Area VehPower VehAge DrivAge BonusMalus VehBrand
 7488  1120377       1     0.22    B        9     13      19        100       B2
@@ -3437,7 +3439,7 @@ vertical-align: -.125em;
 23522 Regular     645    R94    201145.0</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># take a look at the observations with the smallest claim amount</span></span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span>(data_sev_agg_clinfo[<span class="fu">order</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimAmount, <span class="at">decreasing =</span> <span class="cn">TRUE</span>),], <span class="at">n =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span>(data_sev_agg_clinfo[<span class="fu">order</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimAmount, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ], <span class="at">n =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>        IDpol ClaimNb Exposure Area VehPower VehAge DrivAge BonusMalus VehBrand
 8600  1167638       1     1.00    C        7      5      49         60       B1
@@ -3555,7 +3557,7 @@ vertical-align: -.125em;
 <section id="box-plot-for-categorical-variables" class="level1">
 <h1>Box plot for categorical variables</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>))</span>
 <span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> categorical_data_freq) {</span>
 <span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># cut y axis at 5000 for visualization purposes</span></span>
 <span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">boxplot</span>(data_sev_agg_clinfo<span class="sc">$</span>ClaimAmount_expected <span class="sc">~</span> data_sev_agg_clinfo[[i]], <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">5000</span>), <span class="at">main =</span> i, <span class="at">xlab =</span> i, <span class="at">ylab =</span> <span class="st">&quot;Claim Amount expected&quot;</span>)</span>

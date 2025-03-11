@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Chris-Gabriel Islam">
-<meta name="dcterms.date" content="2025-03-10">
+<meta name="dcterms.date" content="2025-03-11">
 
 <title>HUK Case Study - Feature Engineering</title>
 <style>
@@ -3116,7 +3116,7 @@ vertical-align: -.125em;
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">March 10, 2025</p>
+      <p class="date">March 11, 2025</p>
     </div>
   </div>
   
@@ -3143,7 +3143,7 @@ vertical-align: -.125em;
 <section id="read-data" class="level1">
 <h1>Read data</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data_sev_edit <span class="ot">=</span> <span class="fu">readRDS</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;edit&quot;</span> , <span class="st">&quot;data_sev_agg_clinfo.rds&quot;</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data_sev_edit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;edit&quot;</span>, <span class="st">&quot;data_sev_agg_clinfo.rds&quot;</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="feature-engineering-for-numerical-variables" class="level1">
@@ -3250,11 +3250,13 @@ vertical-align: -.125em;
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Transform categorical variables to clusters</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>data_sev_edit<span class="sc">$</span>clArea <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>Area <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>), <span class="st">&quot;ABC&quot;</span>, <span class="st">&quot;DEF&quot;</span>)</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>data_sev_edit<span class="sc">$</span>clRegion <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>Region <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;R24&quot;</span>, <span class="st">&quot;R25&quot;</span>, <span class="st">&quot;R52&quot;</span>, <span class="st">&quot;R53&quot;</span>), <span class="st">&quot;Cluster1&quot;</span>,</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>                                 <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>Region <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;R41&quot;</span>, <span class="st">&quot;R42&quot;</span>, <span class="st">&quot;R54&quot;</span>, <span class="st">&quot;R74&quot;</span>, <span class="st">&quot;R82&quot;</span>), <span class="st">&quot;Cluster2&quot;</span>,</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>                                        <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>Region <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;R43&quot;</span>, <span class="st">&quot;R94&quot;</span>), <span class="st">&quot;Cluster3&quot;</span>, <span class="st">&quot;Cluster4&quot;</span>))) </span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>data_sev_edit<span class="sc">$</span>clVehBrand <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>VehBrand <span class="sc">==</span> <span class="st">&quot;B12&quot;</span>, <span class="st">&quot;B12&quot;</span>, <span class="st">&quot;other&quot;</span>)</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Delete original variables</span></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>data_sev_edit <span class="ot">&lt;-</span> data_sev_edit <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(Area, Region, VehBrand))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>Region <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;R41&quot;</span>, <span class="st">&quot;R42&quot;</span>, <span class="st">&quot;R54&quot;</span>, <span class="st">&quot;R74&quot;</span>, <span class="st">&quot;R82&quot;</span>), <span class="st">&quot;Cluster2&quot;</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>Region <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;R43&quot;</span>, <span class="st">&quot;R94&quot;</span>), <span class="st">&quot;Cluster3&quot;</span>, <span class="st">&quot;Cluster4&quot;</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>data_sev_edit<span class="sc">$</span>clVehBrand <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(data_sev_edit<span class="sc">$</span>VehBrand <span class="sc">==</span> <span class="st">&quot;B12&quot;</span>, <span class="st">&quot;B12&quot;</span>, <span class="st">&quot;other&quot;</span>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Delete original variables</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>data_sev_edit <span class="ot">&lt;-</span> data_sev_edit <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(Area, Region, VehBrand))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="interaction-effects" class="level1">

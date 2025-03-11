@@ -46,15 +46,17 @@ The data seems to be integer since there are no missing values. The data types a
 
 ```{r check join}
 # sum ClaimAmount per client (for later check)
-data_sev_agg <- data_sev %>% group_by(IDpol) %>% summarise(ClaimAmount = sum(ClaimAmount), ClaimNb_sev = n())
+data_sev_agg <- data_sev %>%
+  group_by(IDpol) %>%
+  summarise(ClaimAmount = sum(ClaimAmount), ClaimNb_sev = n())
 # join the client information to the aggregated severity data
 data_sev_agg_clinfo <- merge(data_freq, data_sev_agg, by = "IDpol")
 # check if the frequency information is the same in both data sets
 sum(data_sev_agg_clinfo$ClaimNb != data_sev_agg_clinfo$ClaimNb_sev)
 # remove the inconsistent observations
-data_sev_agg_clinfo <- data_sev_agg_clinfo[data_sev_agg_clinfo$ClaimNb == data_sev_agg_clinfo$ClaimNb_sev,]
+data_sev_agg_clinfo <- data_sev_agg_clinfo[data_sev_agg_clinfo$ClaimNb == data_sev_agg_clinfo$ClaimNb_sev, ]
 data_sev_agg_clinfo$ClaimNb_sev <- NULL
-# check that every observation has a unique policy ID 
+# check that every observation has a unique policy ID
 sum(duplicated(data_sev_agg_clinfo$IDpol))
 ```
 
@@ -72,7 +74,7 @@ We see that most clients have not made any claims. Most of the clients tend to h
 ```{r plotting the data}
 # Plotting histograms for numerical data
 numeric_data_freq <- c("ClaimAmount", "ClaimNb", "Exposure", "VehPower", "VehAge", "DrivAge", "BonusMalus", "Density")
-par(mfrow = c(2,2))
+par(mfrow = c(2, 2))
 for (i in numeric_data_freq) {
   hist(data_sev_agg_clinfo[[i]], main = NULL, xlab = i, breaks = 40)
 }
@@ -95,9 +97,9 @@ Most numerical variables are not normally distributed. We might need to normaliz
 
 ```{r outlier removal number of claims}
 # take a look at the observations with the larges number of claims.
-head(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimNb, decreasing = TRUE),], n = 20)
+head(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimNb, decreasing = TRUE), ], n = 20)
 # remove the observations with more than 5 claims
-data_sev_agg_clinfo <- data_sev_agg_clinfo[data_sev_agg_clinfo$ClaimNb < 5,]
+data_sev_agg_clinfo <- data_sev_agg_clinfo[data_sev_agg_clinfo$ClaimNb < 5, ]
 ```
 
 We see that the observations with more than 5 claims stem probably from the same person. We remove these observations. The idea of this removal stems from M. Wüthrich and Merz (2023), https://doi.org/10.1007/978-3-031-12409-9_13
@@ -106,9 +108,9 @@ We see that the observations with more than 5 claims stem probably from the same
 
 ```{r outlier removal claim amount}
 # take a look at the observations with the largest claim amount
-head(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimAmount, decreasing = TRUE),], n = 20)
+head(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimAmount, decreasing = TRUE), ], n = 20)
 # take a look at the observations with the smallest claim amount
-tail(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimAmount, decreasing = TRUE),], n = 20)
+tail(data_sev_agg_clinfo[order(data_sev_agg_clinfo$ClaimAmount, decreasing = TRUE), ], n = 20)
 ```
 
 We do not see any observations in the claim amount stemming from a single suspicious person. Still, the one claim above € 4M and the two claims above € 1M seem like outliers. They will be winsorized later. 
@@ -160,7 +162,7 @@ The largest (negative) correlation seems to be between the driver's age and the 
 # Box plot for categorical variables
 
 ```{r box plots}
-par(mfrow = c(2,2))
+par(mfrow = c(2, 2))
 for (i in categorical_data_freq) {
   # cut y axis at 5000 for visualization purposes
   boxplot(data_sev_agg_clinfo$ClaimAmount_expected ~ data_sev_agg_clinfo[[i]], ylim = c(0, 5000), main = i, xlab = i, ylab = "Claim Amount expected")
