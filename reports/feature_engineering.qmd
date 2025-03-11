@@ -15,7 +15,6 @@ format:
 rm(list = ls())
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr) # for data manipulation
-library(textshape) # for function "column_to_rownames"
 library(moments) # to measure skewness
 library(rpart) # for decision trees
 library(rpart.plot) # for plotting decision trees
@@ -54,12 +53,9 @@ data_sev_edit$clVehAge <- cut(data_sev_edit$VehAge, breaks = c(-Inf, 1, 3, 15, I
 data_sev_edit <- data_sev_edit %>% select(-c(Density, BonusMalus, DrivAge, VehPower, VehAge, ClaimAmount_expected))
 ```
 
-Since the scales of the other numeric variables are in a similar ballpark, we do not scale them.
-
 # Feature Engineering for categorical variables
 
 Again we use a decision tree to find the split points for the clusters.
-
 
 ```{r categorical feature engineering}
 # calculate regression trees
