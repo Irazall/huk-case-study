@@ -18,15 +18,13 @@ library(caret) # for data partition
 library(dplyr) # for data manipulation
 library(car) # for VIF
 library(glmnet) # for lasso regression
-library(randomForest) # for random forest
-library(nnet) # for neural network
-library(xgboost) # for xgboost
+library(h2o) # for machine learning
 ```
 
 # Read data
 
 ```{r read data}
-data_sev_cl = readRDS(here::here("data", "edit" , "data_sev_cl.rds"))
+data_sev_cl <- readRDS(here::here("data", "edit", "data_sev_cl.rds"))
 ```
 
 # Train-Test Split
@@ -36,8 +34,8 @@ We split the data into a training and a test set. Due to the skewness of the cla
 ```{r train-test-split}
 set.seed(176)
 train_index <- createDataPartition(data_sev_cl$target, p = 0.8, list = FALSE)
-train_data <- data_sev_cl[train_index,]
-test_data <- data_sev_cl[-train_index,]
+train_data <- data_sev_cl[train_index, ]
+test_data <- data_sev_cl[-train_index, ]
 summary(train_data$target)
 summary(test_data$target)
 ```
@@ -45,9 +43,9 @@ summary(test_data$target)
 # Model Creation
 
 
-## Linear Regression
+## Linear Regression (Baseline)
 
-As a baseline model, we use a linear regression model.
+As a baseline model and for better interpretation of the mechanisms later one, we first use a linear regression model.
 
 ```{r lm}
 lr_mod <- lm(target ~ ., data = train_data)
@@ -59,7 +57,7 @@ vif(lr_mod)
 Based on the diagnostics, the linear model fits the data very badly. Apparently, we deal with a heavy-tail problem. In addition, there is colinearity between Density and Area. Some observations have a high leverage. Next, we use a lasso regression to select the most important features.
 
 ```{r lasso}
-x <- model.matrix(target ~ ., data = data_sev_cl)[,-1]
+x <- model.matrix(target ~ ., data = data_sev_cl)[, -1]
 y <- data_sev_cl$target
 lasso_mod <- cv.glmnet(x, y, alpha = 1)
 coef(lasso_mod, s = "lambda.min")
@@ -67,36 +65,57 @@ coef(lasso_mod, s = "lambda.min")
 
 Surprisingly, all variables seem to be important following the lasso.
 
-## Random Forest
+## Additional models
+
+We test additional models using the h2o framework.
+
+```{r h2o}
+# Start h2o
+h2o.init()
+# Convert dataset into h2o format
+train_h2o <- as.h2o(train_data)
+test_h2o <- as.h2o(test_data)
+# Define target and predictors
+target <- "target" # Replace with actual target column name
+predictors <- setdiff(names(train_h2o), target) # All columns except target
+```
+
+### Random Forest
 
 ```{r rf}
-rf_mod <- randomForest(target ~ ., data = train_data)
-rf_mod
-importance(rf_mod)
+rf_mod <- h2o.randomForest(
+  x = predictors,
+  y = target,
+  training_frame = train_h2o,
+  ntrees = 100,
+  max_depth = 20,
+  seed = 42
+)
 ```
 
-## Neural Network
+### Neural Network
 
 ```{r nn}
-nn_mod <- nnet(target ~ ., data = train_data, size = 5, maxit = 1000)
-summary(nn_mod)
+nn_mod <- h2o.glm(
+  x = predictors,
+  y = target,
+  training_frame = train_h2o,
+  family = "gaussian"
+)
 ```
 
-## XGBoost
+### XGBoost
 
 ```{r xgboost}
-# Convert categorical features to dummy variables
-dummies <- dummyVars("~ .", data = train_data) 
-train_numeric <- predict(dummies, newdata = train_data)  # Transform data
-# Convert to matrix
-train_matrix <- as.matrix(train_numeric)
-# Define target
-train_label <- train_data$target
-# Create DMatrix
-dtrain <- xgb.DMatrix(data = train_matrix, label = train_label)
-# Train model
-xgb_mod <- xgboost(data = dtrain, nrounds = 100, objective = "reg:squarederror")
-summary(xgb_mod)
+xgb_mod <- h2o.xgboost(
+  x = predictors,
+  y = target,
+  training_frame = train_h2o,
+  ntrees = 100,
+  max_depth = 6,
+  learn_rate = 0.1,
+  seed = 42
+)
 ```
 
 # Model Comparison
@@ -104,22 +123,32 @@ summary(xgb_mod)
 As a target metric, we use the root mean squared error (RMSE) since in the insurance context, large errors are more costly than small errors and can even lead to bankruptcy.
 
 ```{r model comparison}
-test_numeric <- predict(dummies, newdata = test_data)  # Same `dummyVars` as before
-test_matrix <- as.matrix(test_numeric)
 # Predictions
 lr_pred <- predict(lr_mod, newdata = test_data)
-rf_pred <- predict(rf_mod, newdata = test_data)
-nn_pred <- predict(nn_mod, newdata = test_data)
-xgb_pred <- predict(xgb_mod, newdata = test_matrix)
+rf_pred <- h2o.predict(rf_mod, newdata = test_h2o)
+nn_pred <- h2o.predict(nn_mod, newdata = test_h2o)
+xgb_pred <- h2o.predict(xgb_mod, newdata = test_h2o)
 # RMSE
 rmse_lr <- sqrt(mean((test_data$target - lr_pred)^2))
-rmse_rf <- sqrt(mean((test_data$target - rf_pred)^2))
-rmse_nn <- sqrt(mean((test_data$target - nn_pred)^2))
-rmse_xgb <- sqrt(mean((test_data$target - xgb_pred)^2))
-rmse_lr
-rmse_rf
-rmse_nn
-rmse_xgb
+rmse_rf <- sqrt(mean((test_h2o$target - rf_pred)^2))
+rmse_nn <- sqrt(mean((test_h2o$target - nn_pred)^2))
+rmse_xgb <- sqrt(mean((test_h2o$target - xgb_pred)^2))
+print("RMSE (Lower is better):")
+print(paste0("Linear Regression:", rmse_lr))
+print(paste0("Random Forest:", rmse_rf))
+print(paste0("Neural Network:", rmse_nn))
+print(paste0("XGBoost:", rmse_xgb))
+# Close h2o cluster
+h2o.shutdown(prompt = FALSE)
 ```
 
-XGBoost is a clear winner.
+All models show a similar performance. The lowest RMSE is achieved by the linear regression. However, other models could potentially achieve lower RMSEs with hyperparameter tuning. Hence, we choose the XGBoost since it is currently preferred by many data scientists and it is known for its high flexibility and performance.
+
+# Save data
+
+We save the train and test set for later use.
+
+```{r save data}
+saveRDS(train_data, here::here("data", "edit", "train_data.rds"))
+saveRDS(test_data, here::here("data", "edit", "test_data.rds"))
+```

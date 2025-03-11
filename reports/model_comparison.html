@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Chris-Gabriel Islam">
-<meta name="dcterms.date" content="2025-03-10">
+<meta name="dcterms.date" content="2025-03-11">
 
 <title>HUK Case Study - Model Comparison</title>
 <style>
@@ -3091,12 +3091,16 @@ vertical-align: -.125em;
   <li><a href="#train-test-split" id="toc-train-test-split" class="nav-link" data-scroll-target="#train-test-split">Train-Test Split</a></li>
   <li><a href="#model-creation" id="toc-model-creation" class="nav-link" data-scroll-target="#model-creation">Model Creation</a>
   <ul class="collapse">
-  <li><a href="#linear-regression" id="toc-linear-regression" class="nav-link" data-scroll-target="#linear-regression">Linear Regression</a></li>
+  <li><a href="#linear-regression-baseline" id="toc-linear-regression-baseline" class="nav-link" data-scroll-target="#linear-regression-baseline">Linear Regression (Baseline)</a></li>
+  <li><a href="#additional-models" id="toc-additional-models" class="nav-link" data-scroll-target="#additional-models">Additional models</a>
+  <ul class="collapse">
   <li><a href="#random-forest" id="toc-random-forest" class="nav-link" data-scroll-target="#random-forest">Random Forest</a></li>
   <li><a href="#neural-network" id="toc-neural-network" class="nav-link" data-scroll-target="#neural-network">Neural Network</a></li>
   <li><a href="#xgboost" id="toc-xgboost" class="nav-link" data-scroll-target="#xgboost">XGBoost</a></li>
   </ul></li>
+  </ul></li>
   <li><a href="#model-comparison" id="toc-model-comparison" class="nav-link" data-scroll-target="#model-comparison">Model Comparison</a></li>
+  <li><a href="#save-data" id="toc-save-data" class="nav-link" data-scroll-target="#save-data">Save data</a></li>
   </ul>
 </nav>
 </div>
@@ -3121,7 +3125,7 @@ vertical-align: -.125em;
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">March 10, 2025</p>
+      <p class="date">March 11, 2025</p>
     </div>
   </div>
   
@@ -3142,15 +3146,13 @@ vertical-align: -.125em;
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr) <span class="co"># for data manipulation</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(car) <span class="co"># for VIF</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet) <span class="co"># for lasso regression</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(randomForest) <span class="co"># for random forest</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(nnet) <span class="co"># for neural network</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(xgboost) <span class="co"># for xgboost</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(h2o) <span class="co"># for machine learning</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="read-data" class="level1">
 <h1>Read data</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data_sev_cl <span class="ot">=</span> <span class="fu">readRDS</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;edit&quot;</span> , <span class="st">&quot;data_sev_cl.rds&quot;</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data_sev_cl <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;edit&quot;</span>, <span class="st">&quot;data_sev_cl.rds&quot;</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="train-test-split" class="level1">
@@ -3159,8 +3161,8 @@ vertical-align: -.125em;
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">176</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>train_index <span class="ot">&lt;-</span> <span class="fu">createDataPartition</span>(data_sev_cl<span class="sc">$</span>target, <span class="at">p =</span> <span class="fl">0.8</span>, <span class="at">list =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>train_data <span class="ot">&lt;-</span> data_sev_cl[train_index,]</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>test_data <span class="ot">&lt;-</span> data_sev_cl[<span class="sc">-</span>train_index,]</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>train_data <span class="ot">&lt;-</span> data_sev_cl[train_index, ]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>test_data <span class="ot">&lt;-</span> data_sev_cl[<span class="sc">-</span>train_index, ]</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(train_data<span class="sc">$</span>target)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -3175,9 +3177,9 @@ vertical-align: -.125em;
 </section>
 <section id="model-creation" class="level1">
 <h1>Model Creation</h1>
-<section id="linear-regression" class="level2">
-<h2 class="anchored" data-anchor-id="linear-regression">Linear Regression</h2>
-<p>As a baseline model, we use a linear regression model.</p>
+<section id="linear-regression-baseline" class="level2">
+<h2 class="anchored" data-anchor-id="linear-regression-baseline">Linear Regression (Baseline)</h2>
+<p>As a baseline model and for better interpretation of the mechanisms later one, we first use a linear regression model.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>lr_mod <span class="ot">&lt;-</span> <span class="fu">lm</span>(target <span class="sc">~</span> ., <span class="at">data =</span> train_data)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(lr_mod)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -3266,7 +3268,7 @@ DrivAge_VehPower 17.847035  1        4.224575</code></pre>
 </div>
 <p>Based on the diagnostics, the linear model fits the data very badly. Apparently, we deal with a heavy-tail problem. In addition, there is colinearity between Density and Area. Some observations have a high leverage. Next, we use a lasso regression to select the most important features.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(target <span class="sc">~</span> ., <span class="at">data =</span> data_sev_cl)[,<span class="sc">-</span><span class="dv">1</span>]</span>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(target <span class="sc">~</span> ., <span class="at">data =</span> data_sev_cl)[, <span class="sc">-</span><span class="dv">1</span>]</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> data_sev_cl<span class="sc">$</span>target</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>lasso_mod <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(x, y, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(lasso_mod, <span class="at">s =</span> <span class="st">&quot;lambda.min&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -3298,253 +3300,214 @@ DrivAge_VehPowerother   -0.15582549</code></pre>
 </div>
 <p>Surprisingly, all variables seem to be important following the lasso.</p>
 </section>
-<section id="random-forest" class="level2">
-<h2 class="anchored" data-anchor-id="random-forest">Random Forest</h2>
+<section id="additional-models" class="level2">
+<h2 class="anchored" data-anchor-id="additional-models">Additional models</h2>
+<p>We test additional models using the h2o framework.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>rf_mod <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(target <span class="sc">~</span> ., <span class="at">data =</span> train_data)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>rf_mod</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Start h2o</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">h2o.init</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
-Call:
- randomForest(formula = target ~ ., data = train_data) 
-               Type of random forest: regression
-                     Number of trees: 500
-No. of variables tried at each split: 3
+H2O is not running yet, starting it now...
 
-          Mean of squared residuals: 1.638555
-                    % Var explained: 4.03</code></pre>
+Note:  In case of errors look at the following log files:
+    /tmp/Rtmp5ctPQZ/file8557519e0306/h2o_irazall_started_from_r.out
+    /tmp/Rtmp5ctPQZ/file85573d4bfb40/h2o_irazall_started_from_r.err
+
+
+Starting H2O JVM and connecting: .... Connection successful!
+
+R is connected to the H2O cluster: 
+    H2O cluster uptime:         2 seconds 601 milliseconds 
+    H2O cluster timezone:       Europe/Berlin 
+    H2O data parsing timezone:  UTC 
+    H2O cluster version:        3.44.0.3 
+    H2O cluster version age:    1 year, 2 months and 18 days 
+    H2O cluster name:           H2O_started_from_R_irazall_rkz631 
+    H2O cluster total nodes:    1 
+    H2O cluster total memory:   3.79 GB 
+    H2O cluster total cores:    8 
+    H2O cluster allowed cores:  8 
+    H2O cluster healthy:        TRUE 
+    H2O Connection ip:          localhost 
+    H2O Connection port:        54321 
+    H2O Connection proxy:       NA 
+    H2O Internal Security:      FALSE 
+    R Version:                  R version 4.4.1 (2024-06-14) </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">importance</span>(rf_mod)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in h2o.clusterInfo(): 
+Your H2O cluster version is (1 year, 2 months and 18 days) old. There may be a newer version available.
+Please download and install the latest version from: https://h2o-release.s3.amazonaws.com/h2o/latest_stable.html</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert dataset into h2o format</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>train_h2o <span class="ot">&lt;-</span> <span class="fu">as.h2o</span>(train_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>                 IncNodePurity
-VehGas                211.8340
-clDensity             129.7125
-clBonusMalus         1000.3329
-clDrivAge             386.2486
-clVehPower            124.6348
-clVehAge              494.6715
-clArea                126.2039
-clRegion              474.9107
-clVehBrand            473.8403
-DrivAge_VehPower      104.4413</code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>test_h2o <span class="ot">&lt;-</span> <span class="fu">as.h2o</span>(test_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define target and predictors</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>target <span class="ot">&lt;-</span> <span class="st">&quot;target&quot;</span> <span class="co"># Replace with actual target column name</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>predictors <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">names</span>(train_h2o), target) <span class="co"># All columns except target</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="random-forest" class="level3">
+<h3 class="anchored" data-anchor-id="random-forest">Random Forest</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>rf_mod <span class="ot">&lt;-</span> <span class="fu">h2o.randomForest</span>(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> predictors,</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> target,</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">training_frame =</span> train_h2o,</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">ntrees =</span> <span class="dv">100</span>,</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_depth =</span> <span class="dv">20</span>,</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">42</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in .h2o.processResponseWarnings(res): Dropping bad and constant columns: [VehGas, clVehBrand, DrivAge_VehPower, clArea, clRegion].</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |=======                                                               |  10%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
 </div>
 </div>
 </section>
-<section id="neural-network" class="level2">
-<h2 class="anchored" data-anchor-id="neural-network">Neural Network</h2>
+<section id="neural-network" class="level3">
+<h3 class="anchored" data-anchor-id="neural-network">Neural Network</h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>nn_mod <span class="ot">&lt;-</span> <span class="fu">nnet</span>(target <span class="sc">~</span> ., <span class="at">data =</span> train_data, <span class="at">size =</span> <span class="dv">5</span>, <span class="at">maxit =</span> <span class="dv">1000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># weights:  111
-initial  value 1051462.941504 
-final  value 861548.415809 
-converged</code></pre>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>nn_mod <span class="ot">&lt;-</span> <span class="fu">h2o.glm</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> predictors,</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> target,</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">training_frame =</span> train_h2o,</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> <span class="st">&quot;gaussian&quot;</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in .h2o.processResponseWarnings(res): Dropping bad and constant columns: [VehGas, clVehBrand, DrivAge_VehPower, clArea, clRegion].</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nn_mod)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>a 20-5-1 network with 111 weights
-options were -
-  b-&gt;h1  i1-&gt;h1  i2-&gt;h1  i3-&gt;h1  i4-&gt;h1  i5-&gt;h1  i6-&gt;h1  i7-&gt;h1  i8-&gt;h1  i9-&gt;h1 
--249.11 -121.91 -130.89  -35.99  -41.96   -9.84  -12.82  -11.25  -18.56 -162.08 
-i10-&gt;h1 i11-&gt;h1 i12-&gt;h1 i13-&gt;h1 i14-&gt;h1 i15-&gt;h1 i16-&gt;h1 i17-&gt;h1 i18-&gt;h1 i19-&gt;h1 
- -58.16  -52.45  -41.62 -171.72  -24.14 -124.34  -49.81   -1.04  -98.56 -207.78 
-i20-&gt;h1 
- -75.60 
-  b-&gt;h2  i1-&gt;h2  i2-&gt;h2  i3-&gt;h2  i4-&gt;h2  i5-&gt;h2  i6-&gt;h2  i7-&gt;h2  i8-&gt;h2  i9-&gt;h2 
--202.46  -92.84 -101.21  -26.79  -36.45   -7.43   -7.29   -8.69  -13.08 -131.20 
-i10-&gt;h2 i11-&gt;h2 i12-&gt;h2 i13-&gt;h2 i14-&gt;h2 i15-&gt;h2 i16-&gt;h2 i17-&gt;h2 i18-&gt;h2 i19-&gt;h2 
- -51.12  -37.93  -23.92 -151.60  -18.65  -95.77  -40.15   -1.65  -84.86 -170.82 
-i20-&gt;h2 
- -55.47 
-  b-&gt;h3  i1-&gt;h3  i2-&gt;h3  i3-&gt;h3  i4-&gt;h3  i5-&gt;h3  i6-&gt;h3  i7-&gt;h3  i8-&gt;h3  i9-&gt;h3 
- 178.22   87.06   91.62   26.50   30.61    7.05    8.97    7.78   12.74  118.83 
-i10-&gt;h3 i11-&gt;h3 i12-&gt;h3 i13-&gt;h3 i14-&gt;h3 i15-&gt;h3 i16-&gt;h3 i17-&gt;h3 i18-&gt;h3 i19-&gt;h3 
-  40.45   32.81   29.71  123.31   16.38   86.54   36.41    0.39   69.41  150.13 
-i20-&gt;h3 
-  49.39 
-  b-&gt;h4  i1-&gt;h4  i2-&gt;h4  i3-&gt;h4  i4-&gt;h4  i5-&gt;h4  i6-&gt;h4  i7-&gt;h4  i8-&gt;h4  i9-&gt;h4 
- -21.08  -10.35  -12.16   -3.57   -4.25   -1.32   -1.08   -0.55   -1.20  -13.54 
-i10-&gt;h4 i11-&gt;h4 i12-&gt;h4 i13-&gt;h4 i14-&gt;h4 i15-&gt;h4 i16-&gt;h4 i17-&gt;h4 i18-&gt;h4 i19-&gt;h4 
-  -5.03   -4.62   -4.02  -14.47   -2.65  -11.63   -4.74    0.38   -8.69  -17.67 
-i20-&gt;h4 
-  -6.94 
-  b-&gt;h5  i1-&gt;h5  i2-&gt;h5  i3-&gt;h5  i4-&gt;h5  i5-&gt;h5  i6-&gt;h5  i7-&gt;h5  i8-&gt;h5  i9-&gt;h5 
-  93.05   44.44   47.87   13.78   15.94    3.32    4.57    3.96    6.62   59.74 
-i10-&gt;h5 i11-&gt;h5 i12-&gt;h5 i13-&gt;h5 i14-&gt;h5 i15-&gt;h5 i16-&gt;h5 i17-&gt;h5 i18-&gt;h5 i19-&gt;h5 
-  21.83   16.88   13.09   66.01    8.83   45.98   20.32   -0.01   33.44   78.56 
-i20-&gt;h5 
-  25.84 
-   b-&gt;o   h1-&gt;o   h2-&gt;o   h3-&gt;o   h4-&gt;o   h5-&gt;o 
-2380.99 1100.97 1588.90 1270.80 1267.16 1486.87 </code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
 </div>
 </div>
 </section>
-<section id="xgboost" class="level2">
-<h2 class="anchored" data-anchor-id="xgboost">XGBoost</h2>
+<section id="xgboost" class="level3">
+<h3 class="anchored" data-anchor-id="xgboost">XGBoost</h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert categorical features to dummy variables</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>dummies <span class="ot">&lt;-</span> <span class="fu">dummyVars</span>(<span class="st">&quot;~ .&quot;</span>, <span class="at">data =</span> train_data) </span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>train_numeric <span class="ot">&lt;-</span> <span class="fu">predict</span>(dummies, <span class="at">newdata =</span> train_data)  <span class="co"># Transform data</span></span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to matrix</span></span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>train_matrix <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(train_numeric)</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Define target</span></span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>train_label <span class="ot">&lt;-</span> train_data<span class="sc">$</span>target</span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Create DMatrix</span></span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>dtrain <span class="ot">&lt;-</span> <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> train_matrix, <span class="at">label =</span> train_label)</span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Train model</span></span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>xgb_mod <span class="ot">&lt;-</span> <span class="fu">xgboost</span>(<span class="at">data =</span> dtrain, <span class="at">nrounds =</span> <span class="dv">100</span>, <span class="at">objective =</span> <span class="st">&quot;reg:squarederror&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>xgb_mod <span class="ot">&lt;-</span> <span class="fu">h2o.xgboost</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> predictors,</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> target,</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">training_frame =</span> train_h2o,</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">ntrees =</span> <span class="dv">100</span>,</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_depth =</span> <span class="dv">6</span>,</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">learn_rate =</span> <span class="fl">0.1</span>,</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">42</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in .h2o.processResponseWarnings(res): Dropping bad and constant columns: [VehGas, clVehBrand, DrivAge_VehPower, clArea, clRegion].</code></pre>
+</div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] train-rmse:4.945901 
-[2] train-rmse:3.463729 
-[3] train-rmse:2.425751 
-[4] train-rmse:1.698817 
-[5] train-rmse:1.189760 
-[6] train-rmse:0.833357 
-[7] train-rmse:0.583833 
-[8] train-rmse:0.409193 
-[9] train-rmse:0.287021 
-[10]    train-rmse:0.201469 
-[11]    train-rmse:0.141670 
-[12]    train-rmse:0.099911 
-[13]    train-rmse:0.070835 
-[14]    train-rmse:0.050612 
-[15]    train-rmse:0.036765 
-[16]    train-rmse:0.027251 
-[17]    train-rmse:0.020895 
-[18]    train-rmse:0.016816 
-[19]    train-rmse:0.014197 
-[20]    train-rmse:0.012566 
-[21]    train-rmse:0.011346 
-[22]    train-rmse:0.010711 
-[23]    train-rmse:0.010259 
-[24]    train-rmse:0.009910 
-[25]    train-rmse:0.009578 
-[26]    train-rmse:0.009272 
-[27]    train-rmse:0.009009 
-[28]    train-rmse:0.008742 
-[29]    train-rmse:0.008516 
-[30]    train-rmse:0.008178 
-[31]    train-rmse:0.007978 
-[32]    train-rmse:0.007763 
-[33]    train-rmse:0.007597 
-[34]    train-rmse:0.007513 
-[35]    train-rmse:0.007244 
-[36]    train-rmse:0.007088 
-[37]    train-rmse:0.006989 
-[38]    train-rmse:0.006939 
-[39]    train-rmse:0.006853 
-[40]    train-rmse:0.006660 
-[41]    train-rmse:0.006452 
-[42]    train-rmse:0.006246 
-[43]    train-rmse:0.006181 
-[44]    train-rmse:0.005964 
-[45]    train-rmse:0.005880 
-[46]    train-rmse:0.005791 
-[47]    train-rmse:0.005671 
-[48]    train-rmse:0.005480 
-[49]    train-rmse:0.005440 
-[50]    train-rmse:0.005322 
-[51]    train-rmse:0.005259 
-[52]    train-rmse:0.005107 
-[53]    train-rmse:0.004988 
-[54]    train-rmse:0.004931 
-[55]    train-rmse:0.004913 
-[56]    train-rmse:0.004894 
-[57]    train-rmse:0.004752 
-[58]    train-rmse:0.004613 
-[59]    train-rmse:0.004557 
-[60]    train-rmse:0.004373 
-[61]    train-rmse:0.004292 
-[62]    train-rmse:0.004216 
-[63]    train-rmse:0.004102 
-[64]    train-rmse:0.004021 
-[65]    train-rmse:0.003945 
-[66]    train-rmse:0.003898 
-[67]    train-rmse:0.003857 
-[68]    train-rmse:0.003845 
-[69]    train-rmse:0.003804 
-[70]    train-rmse:0.003728 
-[71]    train-rmse:0.003677 
-[72]    train-rmse:0.003625 
-[73]    train-rmse:0.003535 
-[74]    train-rmse:0.003405 
-[75]    train-rmse:0.003311 
-[76]    train-rmse:0.003224 
-[77]    train-rmse:0.003173 
-[78]    train-rmse:0.003094 
-[79]    train-rmse:0.003065 
-[80]    train-rmse:0.003032 
-[81]    train-rmse:0.002982 
-[82]    train-rmse:0.002945 
-[83]    train-rmse:0.002860 
-[84]    train-rmse:0.002839 
-[85]    train-rmse:0.002814 
-[86]    train-rmse:0.002797 
-[87]    train-rmse:0.002749 
-[88]    train-rmse:0.002693 
-[89]    train-rmse:0.002673 
-[90]    train-rmse:0.002649 
-[91]    train-rmse:0.002612 
-[92]    train-rmse:0.002581 
-[93]    train-rmse:0.002536 
-[94]    train-rmse:0.002491 
-[95]    train-rmse:0.002467 
-[96]    train-rmse:0.002429 
-[97]    train-rmse:0.002371 
-[98]    train-rmse:0.002365 
-[99]    train-rmse:0.002344 
-[100]   train-rmse:0.002330 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(xgb_mod)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>               Length Class              Mode       
-handle              1 xgb.Booster.handle externalptr
-raw            301567 -none-             raw        
-niter               1 -none-             numeric    
-evaluation_log      2 data.table         list       
-call               14 -none-             call       
-params              2 -none-             list       
-callbacks           2 -none-             list       
-feature_names      31 -none-             character  
-nfeatures           1 -none-             numeric    </code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |=                                                                     |   2%
+  |                                                                            
+  |====                                                                  |   6%
+  |                                                                            
+  |=========                                                             |  13%
+  |                                                                            
+  |=============                                                         |  18%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
 </div>
 </div>
+</section>
 </section>
 </section>
 <section id="model-comparison" class="level1">
 <h1>Model Comparison</h1>
 <p>As a target metric, we use the root mean squared error (RMSE) since in the insurance context, large errors are more costly than small errors and can even lead to bankruptcy.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>test_numeric <span class="ot">&lt;-</span> <span class="fu">predict</span>(dummies, <span class="at">newdata =</span> test_data)  <span class="co"># Same `dummyVars` as before</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>test_matrix <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(test_numeric)</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Predictions</span></span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>lr_pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(lr_mod, <span class="at">newdata =</span> test_data)</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>rf_pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(rf_mod, <span class="at">newdata =</span> test_data)</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>nn_pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(nn_mod, <span class="at">newdata =</span> test_data)</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>xgb_pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(xgb_mod, <span class="at">newdata =</span> test_matrix)</span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="co"># RMSE</span></span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>rmse_lr <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_data<span class="sc">$</span>target <span class="sc">-</span> lr_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>rmse_rf <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_data<span class="sc">$</span>target <span class="sc">-</span> rf_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>rmse_nn <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_data<span class="sc">$</span>target <span class="sc">-</span> nn_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>rmse_xgb <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_data<span class="sc">$</span>target <span class="sc">-</span> xgb_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>rmse_lr</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Predictions</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>lr_pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(lr_mod, <span class="at">newdata =</span> test_data)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>rf_pred <span class="ot">&lt;-</span> <span class="fu">h2o.predict</span>(rf_mod, <span class="at">newdata =</span> test_h2o)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 1.291104</code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>rmse_rf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>nn_pred <span class="ot">&lt;-</span> <span class="fu">h2o.predict</span>(nn_mod, <span class="at">newdata =</span> test_h2o)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 1.293812</code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>rmse_nn</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>xgb_pred <span class="ot">&lt;-</span> <span class="fu">h2o.predict</span>(xgb_mod, <span class="at">newdata =</span> test_h2o)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 6.564449</code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>rmse_xgb</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># RMSE</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>rmse_lr <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_data<span class="sc">$</span>target <span class="sc">-</span> lr_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>rmse_rf <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_h2o<span class="sc">$</span>target <span class="sc">-</span> rf_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>rmse_nn <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_h2o<span class="sc">$</span>target <span class="sc">-</span> nn_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>rmse_xgb <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((test_h2o<span class="sc">$</span>target <span class="sc">-</span> xgb_pred)<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&quot;RMSE (Lower is better):&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.002531889</code></pre>
+<pre><code>[1] &quot;RMSE (Lower is better):&quot;</code></pre>
 </div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">&quot;Linear Regression:&quot;</span>, rmse_lr))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] &quot;Linear Regression:1.29110411034871&quot;</code></pre>
 </div>
-<p>XGBoost is a clear winner.</p>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">&quot;Random Forest:&quot;</span>, rmse_rf))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] &quot;Random Forest:1.30148996861649&quot;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">&quot;Neural Network:&quot;</span>, rmse_nn))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] &quot;Neural Network:1.29753799244597&quot;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">&quot;XGBoost:&quot;</span>, rmse_xgb))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] &quot;XGBoost:1.30302203541581&quot;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Close h2o cluster</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">h2o.shutdown</span>(<span class="at">prompt =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>All models show a similar performance. The lowest RMSE is achieved by the linear regression. However, other models could potentially achieve lower RMSEs with hyperparameter tuning. Hence, we choose the XGBoost since it is currently preferred by many data scientists and it is known for its high flexibility and performance.</p>
+</section>
+<section id="save-data" class="level1">
+<h1>Save data</h1>
+<p>We save the train and test set for later use.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(train_data, here<span class="sc">::</span><span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;edit&quot;</span>, <span class="st">&quot;train_data.rds&quot;</span>))</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(test_data, here<span class="sc">::</span><span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;edit&quot;</span>, <span class="st">&quot;test_data.rds&quot;</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 </section>
 
 </main>
