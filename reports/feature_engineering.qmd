@@ -90,6 +90,8 @@ data_sev_edit$DrivAge_VehPower <- ifelse(data_sev_edit$DrivAge_VehPower %in% c("
 ```{r save data}
 # Rename log_claim_amount_expected to target
 data_sev_edit <- data_sev_edit %>% rename(target = log_ClaimAmount_expected)
+# Make sure that all character variables are factors
+data_sev_edit <- data_sev_edit %>% mutate(across(where(is.character), as.factor))
 # Save data as RDS
 saveRDS(data_sev_edit, file = here::here("data", "edit", "data_sev_cl.rds"))
 ```

@@ -144,6 +144,8 @@ h2o.shutdown(prompt = FALSE)
 
 All models show a similar performance. The lowest RMSE is achieved by the linear regression. However, other models could potentially achieve lower RMSEs with hyperparameter tuning. Hence, we choose the XGBoost since it is currently preferred by many data scientists and it is known for its high flexibility and performance.
 
+In comparison, the standard deviation of the target variable `r round(sd(test_data$target), 4)`.
+
 # Save data
 
 We save the train and test set for later use.
