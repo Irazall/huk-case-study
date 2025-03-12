@@ -24,6 +24,9 @@ library(h2o) # for machine learning
 ```{r read data}
 train_data <- readRDS(here::here("data", "edit", "train_data.rds"))
 test_data <- readRDS(here::here("data", "edit", "test_data.rds"))
+# one-hot encode all categorical variables since SHAP values are not shown correctly for categorical variables
+train_data <- dummyVars(" ~ .", data = train_data, fullRank = TRUE) %>% predict(train_data)
+test_data <- dummyVars(" ~ .", data = test_data, fullRank = TRUE) %>% predict(test_data)
 ```
 
 # Improve XGBoost model
