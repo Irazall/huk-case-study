@@ -89,18 +89,33 @@ rf_mod <- h2o.randomForest(
   training_frame = train_h2o,
   ntrees = 100,
   max_depth = 20,
-  seed = 42
+  seed = 176
 )
 ```
 
 ### Neural Network
 
 ```{r nn}
-nn_mod <- h2o.glm(
+# Create validation sample
+set.seed(176)
+train_index_nn <- createDataPartition(train_data$target, p = 0.8, list = FALSE)
+train_data_nn <- train_data[train_index_nn, ]
+test_data_nn <- train_data[-train_index_nn, ]
+# Train model
+nn_mod <- h2o.deeplearning(
   x = predictors,
   y = target,
-  training_frame = train_h2o,
-  family = "gaussian"
+  training_frame = as.h2o(train_data_nn),
+  validation_frame = as.h2o(test_data_nn),
+  activation = "RectifierWithDropout",  
+  hidden = c(50, 50),                    
+  epochs = 100,                         
+  input_dropout_ratio = 0.2,            
+  l1 = 1e-5,                           
+  l2 = 1e-5,                         
+  stopping_metric = "RMSE",  
+  stopping_tolerance = 0.001,           
+  stopping_rounds = 5     
 )
 ```
 
@@ -114,7 +129,7 @@ xgb_mod <- h2o.xgboost(
   ntrees = 100,
   max_depth = 6,
   learn_rate = 0.1,
-  seed = 42
+  seed = 176
 )
 ```
 
@@ -133,11 +148,11 @@ rmse_lr <- sqrt(mean((test_data$target - lr_pred)^2))
 rmse_rf <- sqrt(mean((test_h2o$target - rf_pred)^2))
 rmse_nn <- sqrt(mean((test_h2o$target - nn_pred)^2))
 rmse_xgb <- sqrt(mean((test_h2o$target - xgb_pred)^2))
-print("RMSE (Lower is better):")
-print(paste0("Linear Regression:", rmse_lr))
-print(paste0("Random Forest:", rmse_rf))
-print(paste0("Neural Network:", rmse_nn))
-print(paste0("XGBoost:", rmse_xgb))
+print("RMSE:")
+print(paste0("Linear Regression: ", rmse_lr))
+print(paste0("Random Forest: ", rmse_rf))
+print(paste0("Neural Network: ", rmse_nn))
+print(paste0("XGBoost: ", rmse_xgb))
 # Close h2o cluster
 h2o.shutdown(prompt = FALSE)
 ```
